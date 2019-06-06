@@ -122,6 +122,17 @@ def preproc_dropna(df_col, args=None):
     df_col.dropna(axis=0, how='any', inplace=True)
     return df_col
 
+def preproc_mean(df_col, args=None):
+    if args is None:
+        args={'cutoff':np.inf}
+    # other answers as nan
+    df_col[df_col > args['cutoff']] = np.nan
+    # nan replaced by world population mean
+    df_col[pd.isna(df_col)] = args['mean']
+    # statistical normalization
+    df_col = (df_col-args['mean']) / df_col.std()
+    return df_col
+
 #### Add your own preprocessing functions ####
 
 # Dataset loader
@@ -143,11 +154,14 @@ class Dataset():
         self.targets = None
         self.costs = None
 
-    def load_arthritis(self, opts=None):
+    def load_cancer(self, opts=None):
         columns = [
             # TARGET: systolic BP average
             FeatureColumn('Questionnaire', 'MCQ220',
                                     None, None),
+            #Demographics, Age in years at screening
+            FeatureColumn('Demographics', 'RIDAGEYR',
+                                             preproc_real, {'cutoff':80}),
             #Laboratory, HPV Vaginal swab- high risk
             FeatureColumn('Laboratory', 'LBXHP2C',
                                              preproc_onehot, {'cutoff':2}),
@@ -236,9 +250,6 @@ class Dataset():
             #Examination, Decayed teeth
             FeatureColumn('Examination', 'OHAROCDT',
                                              preproc_onehot, {'cutoff':2}),
-            #Demographics, Age in years at screening
-            FeatureColumn('Demographics', 'RIDAGEYR',
-                                             preproc_real, {'cutoff':80}),
             #Demographics, Race/Hispanic
             FeatureColumn('Demographics', 'RIDRETH3',
                                              preproc_real, {'cutoff':7}),
@@ -456,8 +467,8 @@ class Dataset():
 
         # Put each person in the corresponding bin
         targets = np.full((target.shape[0]), 3)
-        targets[target == 1] = 0 # yes arthritis
-        targets[target == 2] = 1 # no arthritis
+        targets[target == 1] = 0 # yes cancer
+        targets[target == 2] = 1 # no cancer
 
        # random permutation
         perm = np.random.permutation(targets.shape[0])
